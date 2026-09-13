@@ -2,24 +2,26 @@ import { describe, it, expect } from "vitest";
 import { buildDependencyGraph } from "./parser";
 import { blastRadius } from "./algorithms";
 import * as path from "path";
+import { findStronglyConnectedComponents } from "./algorithms";
 
-describe("blastRadius", () => {
+describe("findStronglyConnectedComponents", () => {
   const rootDir = path.join(__dirname, "..", "test-fixture");
   const graph = buildDependencyGraph(rootDir);
 
-  it("finds all files that transitively depend on constants.ts", () => {
-    const constantsId = [...graph.nodes.keys()].find(id => id.endsWith("constants.ts"))!;
-    const radius = blastRadius(graph, constantsId);
-    const names = radius.map(id => path.basename(id)).sort();
+  it("groups cyclicA and cyclicB together, and leaves non-cyclic files as singletons", () => {
+    const sccs = findStronglyConnectedComponents(graph);
 
-    expect(names).toEqual(["app.ts", "math.ts"]);
-  });
+    // Convert each SCC (array of ids) into a sorted array of just filenames,
+    // so we can compare cleanly regardless of path/order differences.
+    const sccNames = sccs
+      .map(scc => scc.map(id => path.basename(id)).sort())
+      .sort((a, b) => a.join(",").localeCompare(b.join(",")));
 
-  it("terminates and returns correctly for a circular dependency", () => {
-    const cyclicAId = [...graph.nodes.keys()].find(id => id.endsWith("cyclicA.ts"))!;
-    const radius = blastRadius(graph, cyclicAId);
-    const names = radius.map(id => path.basename(id));
-
-    expect(names).toEqual(["cyclicB.ts"]);
+    expect(sccNames).toEqual([
+      ["app.ts"],
+      ["constants.ts"],
+      ["cyclicA.ts", "cyclicB.ts"],
+      ["math.ts"],
+    ]);
   });
 });
