@@ -103,6 +103,7 @@ function buildCondensationGraph(graph: DependencyGraph, sccs: string[][]) {
 
   return { sccIndex, condOutgoing, condInDegree };
 }
+
 export function topologicalSort(graph: DependencyGraph): string[][] {
   const sccs = findStronglyConnectedComponents(graph);
   const { condOutgoing, condInDegree } = buildCondensationGraph(graph, sccs);
@@ -128,4 +129,27 @@ export function topologicalSort(graph: DependencyGraph): string[][] {
 
   // Expand each SCC index back into its actual file ids.
   return order.map(sccId => sccs[sccId]);
+}
+
+export function findDeadCode(graph: DependencyGraph): string[] {
+  const entryPoints = [...graph.nodes.values()]
+    .filter(node => node.isEntry)
+    .map(node => node.id);
+
+  const reachable = new Set<string>();
+  const queue: string[] = [...entryPoints];
+  for (const id of entryPoints) reachable.add(id);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const dependencies = graph.outgoing.get(current) ?? new Set<string>();
+
+    for (const dep of dependencies) {
+      if (reachable.has(dep)) continue;
+      reachable.add(dep);
+      queue.push(dep);
+    }
+  }
+
+  return [...graph.nodes.keys()].filter(id => !reachable.has(id));
 }

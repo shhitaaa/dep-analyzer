@@ -4,6 +4,7 @@ import { blastRadius } from "./algorithms";
 import * as path from "path";
 import { findStronglyConnectedComponents } from "./algorithms";
 import { topologicalSort } from "./algorithms";
+import { findDeadCode } from "./algorithms";
 
 describe("blastRadius", () => {
   const rootDir = path.join(__dirname, "..", "test-fixture");
@@ -76,5 +77,27 @@ describe("topologicalSort", () => {
     const names = cyclicStage.map(id => path.basename(id)).sort();
 
     expect(names).toEqual(["cyclicA.ts", "cyclicB.ts"]);
+  });
+});
+
+
+describe("findDeadCode", () => {
+  const rootDir = path.join(__dirname, "..", "test-fixture");
+  const graph = buildDependencyGraph(rootDir);
+
+  it("flags cyclicA and cyclicB as dead code, since neither is reachable from app.ts", () => {
+    const deadCode = findDeadCode(graph);
+    const names = deadCode.map(id => path.basename(id)).sort();
+
+    expect(names).toEqual(["cyclicA.ts", "cyclicB.ts"]);
+  });
+
+  it("does not flag files that are actually reachable from an entry point", () => {
+    const deadCode = findDeadCode(graph);
+    const names = deadCode.map(id => path.basename(id));
+
+    expect(names).not.toContain("app.ts");
+    expect(names).not.toContain("math.ts");
+    expect(names).not.toContain("constants.ts");
   });
 });
