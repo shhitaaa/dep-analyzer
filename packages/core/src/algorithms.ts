@@ -74,3 +74,58 @@ export function findStronglyConnectedComponents(graph: DependencyGraph): string[
 
   return sccs;
 }
+
+function buildCondensationGraph(graph: DependencyGraph, sccs: string[][]) {
+  // Map each node id to the index of the SCC it belongs to.
+  const sccIndex = new Map<string, number>();
+  sccs.forEach((scc, i) => {
+    for (const id of scc) sccIndex.set(id, i);
+  });
+
+  const condOutgoing = new Map<number, Set<number>>();
+  const condInDegree = new Map<number, number>();
+  sccs.forEach((_, i) => {
+    condOutgoing.set(i, new Set());
+    condInDegree.set(i, 0);
+  });
+
+  for (const edge of graph.edges) {
+    const fromScc = sccIndex.get(edge.from)!;
+    const toScc = sccIndex.get(edge.to)!;
+    if (fromScc === toScc) continue; // edge is inside one cycle/group, ignore for build order
+
+    // Build-order edge: toScc must come before fromScc.
+    if (!condOutgoing.get(toScc)!.has(fromScc)) {
+      condOutgoing.get(toScc)!.add(fromScc);
+      condInDegree.set(fromScc, condInDegree.get(fromScc)! + 1);
+    }
+  }
+
+  return { sccIndex, condOutgoing, condInDegree };
+}
+export function topologicalSort(graph: DependencyGraph): string[][] {
+  const sccs = findStronglyConnectedComponents(graph);
+  const { condOutgoing, condInDegree } = buildCondensationGraph(graph, sccs);
+
+  const queue: number[] = [];
+  for (const [sccId, degree] of condInDegree) {
+    if (degree === 0) queue.push(sccId);
+  }
+
+  const order: number[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    order.push(current);
+
+    for (const neighbor of condOutgoing.get(current)!) {
+      condInDegree.set(neighbor, condInDegree.get(neighbor)! - 1);
+      if (condInDegree.get(neighbor) === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  // Expand each SCC index back into its actual file ids.
+  return order.map(sccId => sccs[sccId]);
+}
