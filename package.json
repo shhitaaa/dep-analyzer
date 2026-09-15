@@ -1,0 +1,25 @@
+{
+  "name": "graphproj",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shhitaaa/dep-analyzer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/shhitaaa/dep-analyzer/issues"
+  },
+  "homepage": "https://github.com/shhitaaa/dep-analyzer#readme"
+}
