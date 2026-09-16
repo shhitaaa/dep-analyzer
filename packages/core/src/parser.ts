@@ -3,9 +3,18 @@ import * as path from "path";
 import { DependencyGraph, GraphNode, GraphEdge } from "./types";
 
 export function buildDependencyGraph(rootDir: string): DependencyGraph {
-  const project = new Project();
-  project.addSourceFilesAtPaths(path.join(rootDir, "**/*.ts"));
+  const project = new Project({
+    compilerOptions: {
+      allowJs: true,
+    },
+  });
 
+  project.addSourceFilesAtPaths([
+    path.join(rootDir, "**/*.{js,jsx,ts,tsx}"),
+    `!${path.join(rootDir, "**/node_modules/**")}`,
+    `!${path.join(rootDir, "**/dist/**")}`,
+    `!${path.join(rootDir, "**/build/**")}`,
+  ]);
   const sourceFiles = project.getSourceFiles();
 
   const nodes = new Map<string, GraphNode>();
@@ -53,7 +62,7 @@ function resolveSpecifier(sf: SourceFile, specifier: string): string | null {
   const dir = path.dirname(sf.getFilePath());
   const base = path.resolve(dir, specifier);
 
-  const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`];
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.jsx`];
 
   const project = sf.getProject();
   for (const candidate of candidates) {
