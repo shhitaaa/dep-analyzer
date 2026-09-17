@@ -1,0 +1,19 @@
+{
+  "name": "@dep-analyzer/ai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@dep-analyzer/core": "*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  }
+}
