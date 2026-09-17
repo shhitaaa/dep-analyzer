@@ -153,3 +153,14 @@ export function findDeadCode(graph: DependencyGraph): string[] {
 
   return [...graph.nodes.keys()].filter(id => !reachable.has(id));
 }
+
+export function computeCentrality(graph: DependencyGraph): Map<string, number> {
+  const centrality = new Map<string, number>();
+
+  for (const id of graph.nodes.keys()) {
+    const inDegree = graph.incoming.get(id)?.size ?? 0;
+    centrality.set(id, inDegree);
+  }
+
+  return centrality;
+}

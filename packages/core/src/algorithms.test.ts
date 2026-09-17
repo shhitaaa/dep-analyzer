@@ -5,6 +5,7 @@ import * as path from "path";
 import { findStronglyConnectedComponents } from "./algorithms";
 import { topologicalSort } from "./algorithms";
 import { findDeadCode } from "./algorithms";
+import { computeCentrality } from "./algorithms";
 
 describe("blastRadius", () => {
   const rootDir = path.join(__dirname, "..", "test-fixture");
@@ -99,5 +100,29 @@ describe("findDeadCode", () => {
     expect(names).not.toContain("app.ts");
     expect(names).not.toContain("math.ts");
     expect(names).not.toContain("constants.ts");
+  });
+});
+
+describe("computeCentrality", () => {
+  const rootDir = path.join(__dirname, "..", "test-fixture");
+  const graph = buildDependencyGraph(rootDir);
+
+  it("gives constants.ts a higher score than a leaf file with no importers", () => {
+    const centrality = computeCentrality(graph);
+
+    const constantsId = [...graph.nodes.keys()].find(id => id.endsWith("constants.ts"))!;
+    const appId = [...graph.nodes.keys()].find(id => id.endsWith("app.ts"))!;
+
+    const constantsScore = centrality.get(constantsId) ?? 0;
+    const appScore = centrality.get(appId) ?? 0;
+
+    expect(constantsScore).toBeGreaterThan(appScore);
+  });
+
+  it("returns 0 for a node with no importers", () => {
+    const centrality = computeCentrality(graph);
+    const appId = [...graph.nodes.keys()].find(id => id.endsWith("app.ts"))!;
+
+    expect(centrality.get(appId)).toBe(0);
   });
 });
