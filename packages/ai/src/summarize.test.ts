@@ -57,4 +57,34 @@ describe("summarizeBlastRadius", () => {
 
     expect(result).toContain("[MOCK RESPONSE]");
   });
+
+  it("resolves affected ids to their relative paths before prompting", async () => {
+  const graph = buildTestGraph();
+  const provider = new MockAiProvider();
+
+  const result = await summarizeBlastRadius(
+    provider,
+    graph,
+    "a.ts",
+    ["b.ts", "c.ts"]
+  );
+
+  expect(result).toContain("[MOCK RESPONSE]");
+  expect(result).toContain("chars");
+  expect(provider.lastPrompt).toContain("src/a.ts");
+  expect(provider.lastPrompt).toContain("src/b.ts");
+  expect(provider.lastPrompt).toContain("src/c.ts");
+  expect(provider.lastPrompt).not.toContain("b.ts\"");
+});
+
+    it("handles the case with no affected files", async () => {
+    const graph = buildTestGraph();
+    const provider = new MockAiProvider();
+
+    const result = await summarizeBlastRadius(provider, graph, "b.ts", []);
+
+    expect(result).toContain("[MOCK RESPONSE]");
+    expect(provider.lastPrompt).toContain("src/b.ts");
+    expect(provider.lastPrompt).toContain("safe to modify");
+    });
 });

@@ -31,14 +31,17 @@ function buildCyclicGraph(): DependencyGraph {
 }
 
 describe("suggestCycleFix", () => {
-  it("resolves cycle ids to paths and returns a suggestion", async () => {
+    it("resolves cycle ids to paths and returns a suggestion", async () => {
     const graph = buildCyclicGraph();
     const provider = new MockAiProvider();
 
     const result = await suggestCycleFix(provider, graph, ["a.ts", "b.ts"]);
 
     expect(result).toContain("[MOCK RESPONSE]");
-  });
+    expect(provider.lastPrompt).toContain("src/a.ts");
+    expect(provider.lastPrompt).toContain("src/b.ts");
+    expect(provider.lastPrompt).toContain("circular dependency");
+    });
 
   it("throws when given a size-1 SCC with no self-import", async () => {
     const graph = buildCyclicGraph();

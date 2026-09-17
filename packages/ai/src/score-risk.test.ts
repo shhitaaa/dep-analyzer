@@ -34,24 +34,28 @@ function buildTestGraph(): DependencyGraph {
 }
 
 describe("scorePrRisk", () => {
-  it("scores a diff touching a high-centrality file", async () => {
+    it("scores a diff touching a high-centrality file", async () => {
     const graph = buildTestGraph();
     const provider = new MockAiProvider();
     const centrality = new Map([
-      ["a.ts", 2],
-      ["b.ts", 0],
-      ["c.ts", 0],
+        ["a.ts", 2],
+        ["b.ts", 0],
+        ["c.ts", 0],
     ]);
 
     const result = await scorePrRisk(
-      provider,
-      graph,
-      ["a.ts", "b.ts"],
-      centrality
+        provider,
+        graph,
+        ["a.ts", "b.ts"],
+        centrality
     );
 
     expect(result).toContain("[MOCK RESPONSE]");
-  });
+    expect(provider.lastPrompt).toContain("src/a.ts");
+    const aIndex = provider.lastPrompt!.indexOf("src/a.ts");
+    const bIndex = provider.lastPrompt!.indexOf("src/b.ts");
+    expect(aIndex).toBeLessThan(bIndex);
+    });
 
   it("handles a diff with no centrality data gracefully", async () => {
     const graph = buildTestGraph();
