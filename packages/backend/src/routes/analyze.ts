@@ -10,6 +10,7 @@ import {
 import { summarizeBlastRadius, suggestCycleFix, scorePrRisk } from "@dep-analyzer/ai";
 import { GroqProvider } from "../providers/groq-provider";
 import { AnalyzeRequestBody } from "../types";
+import { getCached, setCached } from "../cache";
 
 
 export const analyzeRouter = Router();
@@ -39,17 +40,25 @@ const aiProvider = new GroqProvider(apiKey);
 
 analyzeRouter.post("/blast-radius/summary", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-
   if (body.source.type !== "local" || !body.source.path || !body.startId) {
     return res.status(400).json({ error: "source.path and startId are required" });
-    }
+  }
+
+  const cacheKey = `blast-summary:${body.source.path}:${body.startId}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
 
   try {
     const graph = buildDependencyGraph(body.source.path);
     const affected = blastRadius(graph, body.startId);
     const summary = await summarizeBlastRadius(aiProvider, graph, body.startId, affected);
-    res.json({ affected, summary });
+    const result = { affected, summary };
+    setCached(cacheKey, result);
+    res.json(result);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
   }
 });
@@ -73,11 +82,21 @@ analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
   if (body.source.type !== "local" || !body.source.path || !body.cycle) {
     return res.status(400).json({ error: "source.path and cycle are required" });
   }
+
+  const cacheKey = `fix-suggestion:${body.source.path}:${body.cycle.join(",")}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+
   try {
     const graph = buildDependencyGraph(body.source.path);
     const suggestion = await suggestCycleFix(aiProvider, graph, body.cycle);
-    res.json({ suggestion });
+    const result = { suggestion };
+    setCached(cacheKey, result);
+    res.json(result);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to generate fix suggestion" });
   }
 });
@@ -115,11 +134,20 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
   if (body.source.type !== "local" || !body.source.path || !body.changedIds) {
     return res.status(400).json({ error: "source.path and changedIds are required" });
   }
+
+  const cacheKey = `pr-risk:${body.source.path}:${body.changedIds.join(",")}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+
   try {
     const graph = buildDependencyGraph(body.source.path);
     const centrality = computeCentrality(graph);
     const riskAssessment = await scorePrRisk(aiProvider, graph, body.changedIds, centrality);
-    res.json({ riskAssessment });
+    const result = { riskAssessment };
+    setCached(cacheKey, result);
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to score PR risk" });
