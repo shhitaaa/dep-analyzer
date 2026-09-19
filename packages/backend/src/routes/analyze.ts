@@ -7,7 +7,8 @@ import {
   topologicalSort,
   computeCentrality,
 } from "@dep-analyzer/core";
-import { MockAiProvider, summarizeBlastRadius, suggestCycleFix, scorePrRisk } from "@dep-analyzer/ai";
+import { summarizeBlastRadius, suggestCycleFix, scorePrRisk } from "@dep-analyzer/ai";
+import { GroqProvider } from "../providers/groq-provider";
 import { AnalyzeRequestBody } from "../types";
 
 
@@ -29,7 +30,12 @@ analyzeRouter.post("/blast-radius", (req, res) => {
   }
 });
 
-const aiProvider = new MockAiProvider();
+const apiKey = process.env.GROQ_API_KEY;
+if (!apiKey) {
+  throw new Error("GROQ_API_KEY is not set in environment variables");
+}
+
+const aiProvider = new GroqProvider(apiKey);
 
 analyzeRouter.post("/blast-radius/summary", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
@@ -115,6 +121,7 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
     const riskAssessment = await scorePrRisk(aiProvider, graph, body.changedIds, centrality);
     res.json({ riskAssessment });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to score PR risk" });
   }
 });
