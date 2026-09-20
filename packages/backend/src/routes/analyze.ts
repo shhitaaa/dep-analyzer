@@ -11,25 +11,7 @@ import { summarizeBlastRadius, suggestCycleFix, scorePrRisk } from "@dep-analyze
 import { GroqProvider } from "../providers/groq-provider";
 import { AnalyzeRequestBody } from "../types";
 import { getCached, setCached } from "../cache";
-
-
-export const analyzeRouter = Router();
-
-analyzeRouter.post("/blast-radius", (req, res) => {
-  const body: AnalyzeRequestBody = req.body;
-
-  if (body.source.type !== "local" || !body.source.path || !body.startId) {
-    return res.status(400).json({ error: "source.path and startId are required" });
-    }
-
-  try {
-    const graph = buildDependencyGraph(body.source.path);
-    const affected = blastRadius(graph, body.startId);
-    res.json({ affected });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to analyze repository" });
-  }
-});
+import { resolveSourceToPath, getSourceKey } from "../github-clone";
 
 const apiKey = process.env.GROQ_API_KEY;
 if (!apiKey) {
@@ -38,20 +20,47 @@ if (!apiKey) {
 
 const aiProvider = new GroqProvider(apiKey);
 
+
+export const analyzeRouter = Router();
+
+analyzeRouter.post("/blast-radius", async (req, res) => {
+  const body: AnalyzeRequestBody = req.body;
+  if (!body.startId) {
+    return res.status(400).json({ error: "startId is required" });
+  }
+
+  let cleanup: (() => Promise<void>) | undefined;
+  try {
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
+    const affected = blastRadius(graph, body.startId);
+    res.json({ affected });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to analyze repository" });
+  } finally {
+    if (cleanup) await cleanup();
+  }
+});
+
 analyzeRouter.post("/blast-radius/summary", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path || !body.startId) {
-    return res.status(400).json({ error: "source.path and startId are required" });
+  if (!body.startId) {
+    return res.status(400).json({ error: "startId is required" });
   }
 
-  const cacheKey = `blast-summary:${body.source.path}:${body.startId}`;
-  const cached = getCached(cacheKey);
-  if (cached) {
-    return res.json(cached);
-  }
-
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const cacheKey = `blast-summary:${getSourceKey(body.source)}:${body.startId}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const affected = blastRadius(graph, body.startId);
     const summary = await summarizeBlastRadius(aiProvider, graph, body.startId, affected);
     const result = { affected, summary };
@@ -60,37 +69,46 @@ analyzeRouter.post("/blast-radius/summary", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });
 
-analyzeRouter.post("/cycles", (req, res) => {
+analyzeRouter.post("/cycles", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path) {
-    return res.status(400).json({ error: "Only local source type is supported right now" });
-  }
+
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const sccs = findStronglyConnectedComponents(graph);
     res.json({ cycles: sccs });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });
 
 analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path || !body.cycle) {
-    return res.status(400).json({ error: "source.path and cycle are required" });
+  if (!body.cycle) {
+    return res.status(400).json({ error: "cycle is required" });
   }
 
-  const cacheKey = `fix-suggestion:${body.source.path}:${body.cycle.join(",")}`;
-  const cached = getCached(cacheKey);
-  if (cached) {
-    return res.json(cached);
-  }
-
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const cacheKey = `fix-suggestion:${getSourceKey(body.source)}:${body.cycle.join(",")}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const suggestion = await suggestCycleFix(aiProvider, graph, body.cycle);
     const result = { suggestion };
     setCached(cacheKey, result);
@@ -98,51 +116,65 @@ analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to generate fix suggestion" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });
 
-analyzeRouter.post("/dead-code", (req, res) => {
+analyzeRouter.post("/dead-code", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path) {
-    return res.status(400).json({ error: "Only local source type is supported right now" });
-  }
+
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const deadCode = findDeadCode(graph);
     res.json({ deadCode });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });
 
-analyzeRouter.post("/topological-sort", (req, res) => {
+analyzeRouter.post("/topological-sort", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path) {
-    return res.status(400).json({ error: "Only local source type is supported right now" });
-  }
+
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const order = topologicalSort(graph);
     res.json({ order });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });
 
 analyzeRouter.post("/pr-risk-score", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (body.source.type !== "local" || !body.source.path || !body.changedIds) {
-    return res.status(400).json({ error: "source.path and changedIds are required" });
+  if (!body.changedIds) {
+    return res.status(400).json({ error: "changedIds is required" });
   }
 
-  const cacheKey = `pr-risk:${body.source.path}:${body.changedIds.join(",")}`;
-  const cached = getCached(cacheKey);
-  if (cached) {
-    return res.json(cached);
-  }
-
+  let cleanup: (() => Promise<void>) | undefined;
   try {
-    const graph = buildDependencyGraph(body.source.path);
+    const cacheKey = `pr-risk:${getSourceKey(body.source)}:${body.changedIds.join(",")}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    const { resolvedPath, cleanup: cleanupFn } = await resolveSourceToPath(body.source);
+    cleanup = cleanupFn;
+
+    const graph = buildDependencyGraph(resolvedPath);
     const centrality = computeCentrality(graph);
     const riskAssessment = await scorePrRisk(aiProvider, graph, body.changedIds, centrality);
     const result = { riskAssessment };
@@ -151,5 +183,7 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to score PR risk" });
+  } finally {
+    if (cleanup) await cleanup();
   }
 });

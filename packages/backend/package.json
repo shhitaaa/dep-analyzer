@@ -21,6 +21,7 @@
     "dotenv": "^18.0.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
-    "groq-sdk": "^1.6.0"
+    "groq-sdk": "^1.6.0",
+    "simple-git": "^3.36.0"
   }
 }
