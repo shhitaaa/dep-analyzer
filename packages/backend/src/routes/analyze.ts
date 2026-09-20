@@ -12,13 +12,10 @@ import { GroqProvider } from "../providers/groq-provider";
 import { AnalyzeRequestBody } from "../types";
 import { getCached, setCached } from "../cache";
 import { resolveSourceToPath, getSourceKey } from "../github-clone";
+import { createAiProvider } from "../providers/provider-factory";
 
-const apiKey = process.env.GROQ_API_KEY;
-if (!apiKey) {
-  throw new Error("GROQ_API_KEY is not set in environment variables");
-}
 
-const aiProvider = new GroqProvider(apiKey);
+const aiProvider = createAiProvider();
 
 
 export const analyzeRouter = Router();
