@@ -9,6 +9,7 @@ import {
   getDeadCode,
   getTopologicalSort,
   getPrRiskScore,
+  getCycleFixSuggestion,
 } from "./api";
 
 type Operation =
@@ -30,6 +31,9 @@ function App() {
   const [result, setResult] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [fixSuggestions, setFixSuggestions] = useState<Record<string, string>>({});
+  const [fixLoadingKey, setFixLoadingKey] = useState<string | null>(null);
 
   async function handleSubmit() {
     setLoading(true);
@@ -77,6 +81,29 @@ function App() {
     }
   }
 
+  async function handleGetFixSuggestion(cycle: string[]) {
+    const key = cycle.join(",");
+    setFixLoadingKey(key);
+
+    const normalizedSourceValue = sourceValue.replace(/\\/g, "/");
+    const source: AnalyzeSource = {
+      type: sourceType,
+      ...(sourceType === "local" ? { path: normalizedSourceValue } : { url: normalizedSourceValue }),
+    };
+
+    try {
+      const data = await getCycleFixSuggestion(source, cycle);
+      setFixSuggestions((prev) => ({ ...prev, [key]: data.suggestion }));
+    } catch (err) {
+      setFixSuggestions((prev) => ({
+        ...prev,
+        [key]: err instanceof Error ? err.message : "Failed to get suggestion",
+      }));
+    } finally {
+      setFixLoadingKey(null);
+    }
+  }
+
   return (
   <div>
     <h1>Dependency Analyzer</h1>
@@ -99,7 +126,32 @@ function App() {
     </button>
 
     {error && <p style={{ color: "red" }}>{error}</p>}
-    {result != null && <pre>{JSON.stringify(result, null, 2)}</pre>}
+
+    {result != null && operation === "cycles" && (
+      <div>
+        {(result as { cycles: string[][] }).cycles
+          .filter((scc) => scc.length > 1)
+          .map((cycle) => {
+            const key = cycle.join(",");
+            return (
+              <div key={key}>
+                <p>{cycle.join(" → ")}</p>
+                <button
+                  onClick={() => handleGetFixSuggestion(cycle)}
+                  disabled={fixLoadingKey === key}
+                >
+                  {fixLoadingKey === key ? "Getting suggestion..." : "Suggest fix"}
+                </button>
+                {fixSuggestions[key] && <p>{fixSuggestions[key]}</p>}
+              </div>
+            );
+          })}
+      </div>
+    )}
+
+    {result != null && operation !== "cycles" && (
+      <pre>{JSON.stringify(result, null, 2)}</pre>
+    )}
   </div>
 );
 }
