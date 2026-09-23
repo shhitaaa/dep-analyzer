@@ -1,122 +1,107 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
+import type { AnalyzeSource } from "./api";
+import SourceInput from "./SourceInput";
+import OperationSelector from "./OperationSelector";
+import {
+  getBlastRadius,
+  getBlastRadiusSummary,
+  getCycles,
+  getDeadCode,
+  getTopologicalSort,
+  getPrRiskScore,
+} from "./api";
+
+type Operation =
+  | "blast-radius"
+  | "blast-radius-summary"
+  | "cycles"
+  | "cycle-fix-suggestion"
+  | "dead-code"
+  | "topological-sort"
+  | "pr-risk-score";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [sourceType, setSourceType] = useState<"local" | "github">("local");
+  const [sourceValue, setSourceValue] = useState("");
+  const [operation, setOperation] = useState<Operation>("blast-radius");
+  const [startId, setStartId] = useState("");
+  const [changedIds, setChangedIds] = useState("");
+
+  const [result, setResult] = useState<unknown>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    const normalizedSourceValue = sourceValue.replace(/\\/g, "/");
+    const normalizedStartId = startId.replace(/\\/g, "/");
+    const normalizedChangedIds = changedIds.replace(/\\/g, "/");
+
+    const source: AnalyzeSource = {
+      type: sourceType,
+      ...(sourceType === "local" ? { path: normalizedSourceValue } : { url: normalizedSourceValue }),
+    };
+
+    try {
+      let data: unknown;
+
+      switch (operation) {
+        case "blast-radius":
+          data = await getBlastRadius(source, normalizedStartId);
+          break;
+        case "blast-radius-summary":
+          data = await getBlastRadiusSummary(source, normalizedStartId);
+          break;
+        case "cycles":
+          data = await getCycles(source);
+          break;
+        case "dead-code":
+          data = await getDeadCode(source);
+          break;
+        case "topological-sort":
+          data = await getTopologicalSort(source);
+          break;
+        case "pr-risk-score":
+          data = await getPrRiskScore(source, normalizedChangedIds.split(",").map((s) => s.trim()));
+          break;
+      }
+
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+  <div>
+    <h1>Dependency Analyzer</h1>
+    <SourceInput
+      sourceType={sourceType}
+      sourceValue={sourceValue}
+      onSourceTypeChange={setSourceType}
+      onSourceValueChange={setSourceValue}
+    />
+    <OperationSelector
+      operation={operation}
+      startId={startId}
+      changedIds={changedIds}
+      onOperationChange={setOperation}
+      onStartIdChange={setStartId}
+      onChangedIdsChange={setChangedIds}
+    />
+    <button onClick={handleSubmit} disabled={loading}>
+      {loading ? "Analyzing..." : "Analyze"}
+    </button>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    {error && <p style={{ color: "red" }}>{error}</p>}
+    {result != null && <pre>{JSON.stringify(result, null, 2)}</pre>}
+  </div>
+);
 }
 
-export default App
+export default App;
