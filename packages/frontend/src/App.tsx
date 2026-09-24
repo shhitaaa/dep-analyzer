@@ -11,6 +11,7 @@ import {
   getPrRiskScore,
   getCycleFixSuggestion,
 } from "./api";
+import ResultsDisplay from "./ResultsDisplay";
 
 type Operation =
   | "blast-radius"
@@ -150,7 +151,7 @@ function App() {
     )}
 
     {result != null && operation !== "cycles" && (
-      <pre>{JSON.stringify(result, null, 2)}</pre>
+      <ResultsDisplay operation={operation} result={result} />
     )}
   </div>
 );
