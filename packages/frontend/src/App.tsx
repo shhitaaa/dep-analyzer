@@ -83,6 +83,14 @@ function App() {
     }
   }
 
+  function handleOperationChange(op: Operation) {
+    setOperation(op);
+    setResult(null);
+    setError(null);
+    setFixSuggestions({});
+    setFixLoadingKey(null);
+  }
+
   async function handleGetFixSuggestion(cycle: string[]) {
     const key = cycle.join(",");
     setFixLoadingKey(key);
@@ -122,7 +130,7 @@ function App() {
         operation={operation}
         startId={startId}
         changedIds={changedIds}
-        onOperationChange={setOperation}
+        onOperationChange={handleOperationChange}
         onStartIdChange={setStartId}
         onChangedIdsChange={setChangedIds}
       />
