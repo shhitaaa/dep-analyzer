@@ -6,6 +6,7 @@ import {
   findDeadCode,
   topologicalSort,
   computeCentrality,
+  type DependencyGraph,
 } from "@dep-analyzer/core";
 import { summarizeBlastRadius, suggestCycleFix, scorePrRisk } from "@dep-analyzer/ai";
 import { GroqProvider } from "../providers/groq-provider";
@@ -20,6 +21,21 @@ const aiProvider = createAiProvider();
 
 export const analyzeRouter = Router();
 
+function toRelativePaths(graph: DependencyGraph, ids: string[]): string[] {
+  return ids.map((id) => graph.nodes.get(id)?.relativePath ?? id);
+}
+function findIdByRelativePath(graph: DependencyGraph, relativePath: string): string {
+  const normalized = relativePath.replace(/\\/g, "/");
+
+  for (const [id, node] of graph.nodes) {
+    if (node.relativePath.replace(/\\/g, "/") === normalized) {
+      return id;
+    }
+  }
+
+  throw new Error(`No file found matching relative path: ${relativePath}`);
+}
+
 analyzeRouter.post("/blast-radius", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
   if (!body.startId) {
@@ -32,8 +48,9 @@ analyzeRouter.post("/blast-radius", async (req, res) => {
     cleanup = cleanupFn;
 
     const graph = buildDependencyGraph(resolvedPath);
-    const affected = blastRadius(graph, body.startId);
-    res.json({ affected });
+    const resolvedStartId = findIdByRelativePath(graph, body.startId);
+    const affected = blastRadius(graph, resolvedStartId);
+    res.json({ affected: toRelativePaths(graph, affected) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
@@ -58,11 +75,12 @@ analyzeRouter.post("/blast-radius/summary", async (req, res) => {
     cleanup = cleanupFn;
 
     const graph = buildDependencyGraph(resolvedPath);
+    const resolvedStartId = findIdByRelativePath(graph, body.startId);
     const affected = blastRadius(graph, body.startId);
     const summary = await summarizeBlastRadius(aiProvider, graph, body.startId, affected);
     const result = { affected, summary };
     setCached(cacheKey, result);
-    res.json(result);
+    res.json({ affected: toRelativePaths(graph, affected), summary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
@@ -81,7 +99,7 @@ analyzeRouter.post("/cycles", async (req, res) => {
 
     const graph = buildDependencyGraph(resolvedPath);
     const sccs = findStronglyConnectedComponents(graph);
-    res.json({ cycles: sccs });
+    res.json({ cycles: sccs.map((scc) => toRelativePaths(graph, scc)) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
@@ -128,7 +146,7 @@ analyzeRouter.post("/dead-code", async (req, res) => {
 
     const graph = buildDependencyGraph(resolvedPath);
     const deadCode = findDeadCode(graph);
-    res.json({ deadCode });
+    res.json({ deadCode: toRelativePaths(graph, deadCode) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
@@ -147,7 +165,7 @@ analyzeRouter.post("/topological-sort", async (req, res) => {
 
     const graph = buildDependencyGraph(resolvedPath);
     const order = topologicalSort(graph);
-    res.json({ order });
+    res.json({ order: order.map((wave) => toRelativePaths(graph, wave)) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to analyze repository" });
