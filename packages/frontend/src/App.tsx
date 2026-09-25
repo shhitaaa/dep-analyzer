@@ -1,3 +1,4 @@
+import "./App.css";
 import { useState } from "react";
 import type { AnalyzeSource } from "./api";
 import SourceInput from "./SourceInput";
@@ -106,47 +107,53 @@ function App() {
   }
 
   return (
-  <div>
+  <div className="app">
     <h1>Dependency Analyzer</h1>
+
     <SourceInput
       sourceType={sourceType}
       sourceValue={sourceValue}
       onSourceTypeChange={setSourceType}
       onSourceValueChange={setSourceValue}
     />
-    <OperationSelector
-      operation={operation}
-      startId={startId}
-      changedIds={changedIds}
-      onOperationChange={setOperation}
-      onStartIdChange={setStartId}
-      onChangedIdsChange={setChangedIds}
-    />
-    <button onClick={handleSubmit} disabled={loading}>
-      {loading ? "Analyzing..." : "Analyze"}
-    </button>
 
-    {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="section">
+      <OperationSelector
+        operation={operation}
+        startId={startId}
+        changedIds={changedIds}
+        onOperationChange={setOperation}
+        onStartIdChange={setStartId}
+        onChangedIdsChange={setChangedIds}
+      />
+
+      <button onClick={handleSubmit} disabled={loading}>
+        {loading ? "Analyzing..." : "Analyze"}
+      </button>
+    </div>
+
+    {error && <div className="error-box">{error}</div>}
+
     {!loading && !error && result == null && (
-      <p>Run an analysis to see results here.</p>
+      <p className="empty-state">Run an analysis to see results here.</p>
     )}
 
     {result != null && operation === "cycles" && (
-      <div>
+      <div className="section">
         {(result as { cycles: string[][] }).cycles
           .filter((scc) => scc.length > 1)
           .map((cycle) => {
             const key = cycle.join(",");
             return (
-              <div key={key}>
-                <p>{cycle.join(" → ")}</p>
+              <div key={key} className="cycle-item">
+                <p className="path">{cycle.join(" → ")}</p>
                 <button
                   onClick={() => handleGetFixSuggestion(cycle)}
                   disabled={fixLoadingKey === key}
                 >
                   {fixLoadingKey === key ? "Getting suggestion..." : "Suggest fix"}
                 </button>
-                {fixSuggestions[key] && <p>{fixSuggestions[key]}</p>}
+                {fixSuggestions[key] && <p className="ai-text">{fixSuggestions[key]}</p>}
               </div>
             );
           })}
@@ -154,7 +161,9 @@ function App() {
     )}
 
     {result != null && operation !== "cycles" && (
-      <ResultsDisplay operation={operation} result={result} />
+      <div className="section">
+        <ResultsDisplay operation={operation} result={result} />
+      </div>
     )}
   </div>
 );

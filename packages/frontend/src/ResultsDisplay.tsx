@@ -19,9 +19,9 @@ function ResultsDisplay({ operation, result }: ResultsDisplayProps) {
       <div>
         <h3>Affected files</h3>
         {data.affected.length === 0 ? (
-          <p>No files are affected.</p>
+          <p className="empty-state">No files are affected.</p>
         ) : (
-          <ul>
+          <ul className="results-list">
             {data.affected.map((file) => (
               <li key={file}>{file}</li>
             ))}
@@ -30,7 +30,7 @@ function ResultsDisplay({ operation, result }: ResultsDisplayProps) {
         {data.summary && (
           <>
             <h3>Summary</h3>
-            <p>{data.summary}</p>
+            <p className="ai-text">{data.summary}</p>
           </>
         )}
       </div>
@@ -45,7 +45,7 @@ function ResultsDisplay({ operation, result }: ResultsDisplayProps) {
         {data.deadCode.length === 0 ? (
           <p>No dead code found.</p>
         ) : (
-          <ul>
+          <ul className="results-list">
             {data.deadCode.map((file) => (
               <li key={file}>{file}</li>
             ))}
@@ -60,7 +60,7 @@ function ResultsDisplay({ operation, result }: ResultsDisplayProps) {
     return (
       <div>
         <h3>Build order</h3>
-        <ol>
+        <ol className="results-list">
           {data.order.map((wave, i) => (
             <li key={i}>{wave.join(", ")}</li>
           ))}
@@ -74,7 +74,7 @@ function ResultsDisplay({ operation, result }: ResultsDisplayProps) {
     return (
       <div>
         <h3>Risk assessment</h3>
-        <p>{data.riskAssessment}</p>
+        <p className="ai-text">{data.riskAssessment}</p>
       </div>
     );
   }
