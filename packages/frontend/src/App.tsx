@@ -127,6 +127,9 @@ function App() {
     </button>
 
     {error && <p style={{ color: "red" }}>{error}</p>}
+    {!loading && !error && result == null && (
+      <p>Run an analysis to see results here.</p>
+    )}
 
     {result != null && operation === "cycles" && (
       <div>
