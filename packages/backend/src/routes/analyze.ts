@@ -53,7 +53,8 @@ analyzeRouter.post("/blast-radius", async (req, res) => {
     res.json({ affected: toRelativePaths(graph, affected) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to analyze repository" });
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
   } finally {
     if (cleanup) await cleanup();
   }
@@ -83,7 +84,8 @@ analyzeRouter.post("/blast-radius/summary", async (req, res) => {
     res.json({ affected: toRelativePaths(graph, affected), summary });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to analyze repository" });
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
   } finally {
     if (cleanup) await cleanup();
   }
@@ -102,7 +104,8 @@ analyzeRouter.post("/cycles", async (req, res) => {
     res.json({ cycles: sccs.map((scc) => toRelativePaths(graph, scc)) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to analyze repository" });
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
   } finally {
     if (cleanup) await cleanup();
   }
@@ -130,8 +133,9 @@ analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to generate fix suggestion" });
-  } finally {
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
+  }finally {
     if (cleanup) await cleanup();
   }
 });
@@ -147,10 +151,11 @@ analyzeRouter.post("/dead-code", async (req, res) => {
     const graph = buildDependencyGraph(resolvedPath);
     const deadCode = findDeadCode(graph);
     res.json({ deadCode: toRelativePaths(graph, deadCode) });
-  } catch (err) {
+    } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to analyze repository" });
-  } finally {
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
+  }finally {
     if (cleanup) await cleanup();
   }
 });
@@ -168,8 +173,9 @@ analyzeRouter.post("/topological-sort", async (req, res) => {
     res.json({ order: order.map((wave) => toRelativePaths(graph, wave)) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to analyze repository" });
-  } finally {
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
+  }finally {
     if (cleanup) await cleanup();
   }
 });
@@ -197,8 +203,9 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to score PR risk" });
-  } finally {
+    const message = err instanceof Error ? err.message : "Failed to analyze repository";
+    res.status(500).json({ error: message });
+  }finally {
     if (cleanup) await cleanup();
   }
 });
