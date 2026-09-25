@@ -18,12 +18,12 @@ describe("analyze routes", () => {
       .post("/analyze/blast-radius")
       .send({
         source: localSource,
-        startId: `${localSource.path}/constants.ts`,
+        startId: "constants.ts",
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.affected).toContain(`${localSource.path}/math.ts`);
-    expect(response.body.affected).toContain(`${localSource.path}/app.ts`);
+    expect(response.body.affected).toContain("math.ts");
+    expect(response.body.affected).toContain("app.ts");
   });
 
   it("POST /analyze/blast-radius returns 400 when startId is missing", async () => {
@@ -39,7 +39,7 @@ describe("analyze routes", () => {
       .post("/analyze/blast-radius/summary")
       .send({
         source: localSource,
-        startId: `${localSource.path}/constants.ts`,
+        startId: "constants.ts",
       });
 
     expect(response.status).toBe(200);
@@ -53,7 +53,7 @@ describe("analyze routes", () => {
 
     expect(response.status).toBe(200);
     const cycleNames = response.body.cycles
-      .map((scc: string[]) => scc.map((id) => path.basename(id)).sort())
+      .map((scc: string[]) => [...scc].sort())
       .find((names: string[]) => names.length === 2);
 
     expect(cycleNames).toEqual(["cyclicA.ts", "cyclicB.ts"]);
@@ -64,7 +64,7 @@ describe("analyze routes", () => {
       .post("/analyze/cycles/fix-suggestion")
       .send({
         source: localSource,
-        cycle: [`${localSource.path}/cyclicA.ts`, `${localSource.path}/cyclicB.ts`],
+        cycle: ["cyclicA.ts", "cyclicB.ts"],
       });
 
     expect(response.status).toBe(200);
@@ -103,7 +103,7 @@ describe("analyze routes", () => {
       .post("/analyze/pr-risk-score")
       .send({
         source: localSource,
-        changedIds: [`${localSource.path}/math.ts`],
+        changedIds: ["math.ts"],
       });
 
     expect(response.status).toBe(200);
