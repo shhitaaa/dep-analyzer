@@ -8,6 +8,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "npm run build -w @dep-analyzer/core && npm run build -w @dep-analyzer/ai && npm run build -w @dep-analyzer/backend",
+    "start": "npm run start -w @dep-analyzer/backend",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

@@ -5,9 +5,15 @@ import { analyzeRouter } from "./routes/analyze";
 import cors from "cors";
 
 export const app = express();
+app.set("trust proxy", 1);
 
 app.use(express.json());
-app.use(cors());
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "http://localhost:5173",
+  ].filter(Boolean) as string[];
+
+app.use(cors({ origin: allowedOrigins }));
 
 const limiter = rateLimit({
   windowMs: 60 * 1000,
