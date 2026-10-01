@@ -77,11 +77,11 @@ analyzeRouter.post("/blast-radius/summary", async (req, res) => {
 
     const graph = buildDependencyGraph(resolvedPath);
     const resolvedStartId = findIdByRelativePath(graph, body.startId);
-    const affected = blastRadius(graph, body.startId);
-    const summary = await summarizeBlastRadius(aiProvider, graph, body.startId, affected);
-    const result = { affected, summary };
+    const affected = blastRadius(graph, resolvedStartId);
+    const summary = await summarizeBlastRadius(aiProvider, graph, resolvedStartId, affected);
+    const result = { affected: toRelativePaths(graph, affected), summary };
     setCached(cacheKey, result);
-    res.json({ affected: toRelativePaths(graph, affected), summary });
+    res.json(result);
   } catch (err) {
     console.error(err);
     const message = err instanceof Error ? err.message : "Failed to analyze repository";
