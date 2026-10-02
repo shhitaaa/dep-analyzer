@@ -182,8 +182,8 @@ analyzeRouter.post("/topological-sort", async (req, res) => {
 
 analyzeRouter.post("/pr-risk-score", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (!body.changedIds) {
-    return res.status(400).json({ error: "changedIds is required" });
+  if (!Array.isArray(body.changedIds) || body.changedIds.length === 0) {
+    return res.status(400).json({ error: "changedIds must be a non-empty array" });
   }
 
   let cleanup: (() => Promise<void>) | undefined;
@@ -196,8 +196,9 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
     cleanup = cleanupFn;
 
     const graph = buildDependencyGraph(resolvedPath);
+    const resolvedChangedIds = body.changedIds.map((id) => findIdByRelativePath(graph, id));
     const centrality = computeCentrality(graph);
-    const riskAssessment = await scorePrRisk(aiProvider, graph, body.changedIds, centrality);
+    const riskAssessment = await scorePrRisk(aiProvider, graph, resolvedChangedIds, centrality);
     const result = { riskAssessment };
     setCached(cacheKey, result);
     res.json(result);
