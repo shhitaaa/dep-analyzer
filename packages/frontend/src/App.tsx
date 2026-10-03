@@ -146,32 +146,27 @@ function App() {
       <p className="empty-state">Run an analysis to see results here.</p>
     )}
 
-  {result != null && operation === "cycles" && (() => {
-    const cycleGroups = (result as { cycles: string[][] }).cycles.filter(
-      (scc) => scc.length > 1
-    );
-
-    return (
+    {result != null && operation === "cycles" && (
       <div className="section">
-        {cycleGroups.length === 0 && <p>No circular dependencies detected.</p>}
-        {cycleGroups.map((cycle) => {
-          const key = cycle.join(",");
-          return (
-            <div key={key} className="cycle-item">
-              <p className="path">{cycle.join(" → ")}</p>
-              <button
-                onClick={() => handleGetFixSuggestion(cycle)}
-                disabled={fixLoadingKey === key}
-              >
-                {fixLoadingKey === key ? "Getting suggestion..." : "Suggest fix"}
-              </button>
-              {fixSuggestions[key] && <p className="ai-text">{fixSuggestions[key]}</p>}
-            </div>
-          );
-        })}
+        {(result as { cycles: string[][] }).cycles
+          .filter((scc) => scc.length > 1)
+          .map((cycle) => {
+            const key = cycle.join(",");
+            return (
+              <div key={key} className="cycle-item">
+                <p className="path">{cycle.join(" → ")}</p>
+                <button
+                  onClick={() => handleGetFixSuggestion(cycle)}
+                  disabled={fixLoadingKey === key}
+                >
+                  {fixLoadingKey === key ? "Getting suggestion..." : "Suggest fix"}
+                </button>
+                {fixSuggestions[key] && <p className="ai-text">{fixSuggestions[key]}</p>}
+              </div>
+            );
+          })}
       </div>
-    );
-  })()}
+    )}
 
     {result != null && operation !== "cycles" && (
       <div className="section">
