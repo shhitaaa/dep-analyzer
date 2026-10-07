@@ -113,8 +113,8 @@ analyzeRouter.post("/cycles", async (req, res) => {
 
 analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
   const body: AnalyzeRequestBody = req.body;
-  if (!body.cycle) {
-    return res.status(400).json({ error: "cycle is required" });
+  if (!Array.isArray(body.cycle) || body.cycle.length < 2) {
+    return res.status(400).json({ error: "cycle must be an array of at least 2 files" });
   }
 
   let cleanup: (() => Promise<void>) | undefined;
@@ -127,7 +127,8 @@ analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
     cleanup = cleanupFn;
 
     const graph = buildDependencyGraph(resolvedPath);
-    const suggestion = await suggestCycleFix(aiProvider, graph, body.cycle);
+    const resolvedCycle = body.cycle.map((id) => findIdByRelativePath(graph, id));
+    const suggestion = await suggestCycleFix(aiProvider, graph, resolvedCycle);
     const result = { suggestion };
     setCached(cacheKey, result);
     res.json(result);
