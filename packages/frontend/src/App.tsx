@@ -135,11 +135,15 @@ function App() {
       <p className="empty-state">Run an analysis to see results here.</p>
     )}
 
-    {result != null && operation === "cycles" && (
-      <div className="section">
-        {(result as { cycles: string[][] }).cycles
-          .filter((scc) => scc.length > 1)
-          .map((cycle) => {
+    {result != null && operation === "cycles" && (() => {
+      const cycleGroups = (result as { cycles: string[][] }).cycles.filter(
+        (scc) => scc.length > 1
+      );
+
+      return (
+        <div className="section">
+          {cycleGroups.length === 0 && <p>No circular dependencies detected.</p>}
+          {cycleGroups.map((cycle) => {
             const key = cycle.join(",");
             return (
               <div key={key} className="cycle-item">
@@ -154,8 +158,9 @@ function App() {
               </div>
             );
           })}
-      </div>
-    )}
+        </div>
+      );
+    })()}
 
     {result != null && operation !== "cycles" && (
       <div className="section">
