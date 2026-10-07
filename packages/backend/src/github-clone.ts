@@ -22,6 +22,9 @@ export async function resolveSourceToPath(
   source: AnalyzeRequestBody["source"]
 ): Promise<{ resolvedPath: string; cleanup: () => Promise<void> }> {
   if (source.type === "local") {
+    if (process.env.ALLOW_LOCAL_SOURCES !== "true") {
+      throw new Error("Local paths are not supported on this server. Use a GitHub URL.");
+    }
     if (!source.path) {
       throw new Error("source.path is required for local source type");
     }
