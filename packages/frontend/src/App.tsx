@@ -24,7 +24,6 @@ type Operation =
   | "pr-risk-score";
 
 function App() {
-  const [sourceType, setSourceType] = useState<"local" | "github">("local");
   const [sourceValue, setSourceValue] = useState("");
   const [operation, setOperation] = useState<Operation>("blast-radius");
   const [startId, setStartId] = useState("");
@@ -42,14 +41,10 @@ function App() {
     setError(null);
     setResult(null);
 
-    const normalizedSourceValue = sourceValue.replace(/\\/g, "/");
     const normalizedStartId = startId.replace(/\\/g, "/");
     const normalizedChangedIds = changedIds.replace(/\\/g, "/");
 
-    const source: AnalyzeSource = {
-      type: sourceType,
-      ...(sourceType === "local" ? { path: normalizedSourceValue } : { url: normalizedSourceValue }),
-    };
+    const source: AnalyzeSource = { type: "github", url: sourceValue.trim() };
 
     try {
       let data: unknown;
@@ -95,11 +90,7 @@ function App() {
     const key = cycle.join(",");
     setFixLoadingKey(key);
 
-    const normalizedSourceValue = sourceValue.replace(/\\/g, "/");
-    const source: AnalyzeSource = {
-      type: sourceType,
-      ...(sourceType === "local" ? { path: normalizedSourceValue } : { url: normalizedSourceValue }),
-    };
+    const source: AnalyzeSource = { type: "github", url: sourceValue.trim() };
 
     try {
       const data = await getCycleFixSuggestion(source, cycle);
@@ -119,9 +110,7 @@ function App() {
     <h1>Dependency Analyzer</h1>
 
     <SourceInput
-      sourceType={sourceType}
       sourceValue={sourceValue}
-      onSourceTypeChange={setSourceType}
       onSourceValueChange={setSourceValue}
     />
 
