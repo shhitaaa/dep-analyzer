@@ -15,6 +15,9 @@ function SourceInput({ sourceValue, onSourceValueChange }: SourceInputProps) {
       <p className="hint">
         Want to analyze a local project? Use the command-line package.
       </p>
+      <p className="hint">
+        Analyzes JavaScript and TypeScript files only (.js, .jsx, .ts, .tsx).
+      </p>
     </div>
   );
 }
