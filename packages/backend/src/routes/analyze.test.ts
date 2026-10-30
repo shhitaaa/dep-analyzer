@@ -1,9 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import * as path from "path";
 import { app } from "../app";
 
 describe("analyze routes", () => {
+    beforeAll(() => {
+    process.env.ALLOW_LOCAL_SOURCES = "true";
+  });
   const fixturePath = path.join(__dirname, "..", "..", "..", "core", "test-fixture", "src");
   const localSource = { type: "local", path: fixturePath.replace(/\\/g, "/") };
 
