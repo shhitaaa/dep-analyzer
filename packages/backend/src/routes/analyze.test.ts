@@ -120,4 +120,56 @@ describe("analyze routes", () => {
 
     expect(response.status).toBe(400);
   });
+
+    it("blast-radius returns relative paths only, never absolute ones", async () => {
+    const response = await request(app)
+      .post("/analyze/blast-radius")
+      .send({ source: localSource, startId: "constants.ts" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.affected.length).toBeGreaterThan(0);
+    for (const file of response.body.affected) {
+      expect(file).not.toMatch(/^([A-Za-z]:)?[\\/]/); // no "/..." or "C:\..." paths
+    }
+  });
+
+  it("blast-radius reports a clear error for a file that doesn't exist", async () => {
+    const response = await request(app)
+      .post("/analyze/blast-radius")
+      .send({ source: localSource, startId: "does-not-exist.ts" });
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.body.error).toMatch(/No file found matching relative path/);
+    expect(response.body.affected).toBeUndefined();
+  });
+
+  it("blast-radius does not accept an absolute path as startId", async () => {
+    const absoluteId = path.join(fixturePath, "constants.ts").replace(/\\/g, "/");
+    const response = await request(app)
+      .post("/analyze/blast-radius")
+      .send({ source: localSource, startId: absoluteId });
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.body.error).toMatch(/No file found matching relative path/);
+  });
+
+  it("blast-radius/summary returns a non-empty affected list for a valid file", async () => {
+    const response = await request(app)
+      .post("/analyze/blast-radius/summary")
+      .send({ source: localSource, startId: "constants.ts" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.affected).toContain("math.ts");
+    expect(response.body.affected).toContain("app.ts");
+    expect(response.body.summary).toBeTruthy();
+  });
+
+  it("blast-radius/summary reports a clear error for a file that doesn't exist", async () => {
+    const response = await request(app)
+      .post("/analyze/blast-radius/summary")
+      .send({ source: localSource, startId: "does-not-exist.ts" });
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.body.error).toMatch(/No file found matching relative path/);
+  });
 });
