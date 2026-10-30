@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Response } from "express";
 import {
   buildDependencyGraph,
   blastRadius,
@@ -14,6 +14,7 @@ import { AnalyzeRequestBody } from "../types";
 import { getCached, setCached } from "../cache";
 import { resolveSourceToPath, getSourceKey } from "../github-clone";
 import { createAiProvider } from "../providers/provider-factory";
+import { NotFoundError } from "../error";
 
 
 const aiProvider = createAiProvider();
@@ -24,6 +25,12 @@ export const analyzeRouter = Router();
 function toRelativePaths(graph: DependencyGraph, ids: string[]): string[] {
   return ids.map((id) => graph.nodes.get(id)?.relativePath ?? id);
 }
+function sendError(res: Response, err: unknown) {
+  console.error(err);
+  const message = err instanceof Error ? err.message : "Failed to analyze repository";
+  const status = err instanceof NotFoundError ? 404 : 500;
+  res.status(status).json({ error: message });
+}
 function findIdByRelativePath(graph: DependencyGraph, relativePath: string): string {
   const normalized = relativePath.replace(/\\/g, "/");
 
@@ -33,7 +40,7 @@ function findIdByRelativePath(graph: DependencyGraph, relativePath: string): str
     }
   }
 
-  throw new Error(`No file found matching relative path: ${relativePath}`);
+  throw new NotFoundError(`No file found matching relative path: ${relativePath}`);
 }
 
 analyzeRouter.post("/blast-radius", async (req, res) => {
@@ -51,10 +58,8 @@ analyzeRouter.post("/blast-radius", async (req, res) => {
     const resolvedStartId = findIdByRelativePath(graph, body.startId);
     const affected = blastRadius(graph, resolvedStartId);
     res.json({ affected: toRelativePaths(graph, affected) });
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
+    } catch (err) {
+    sendError(res, err);
   } finally {
     if (cleanup) await cleanup();
   }
@@ -82,10 +87,8 @@ analyzeRouter.post("/blast-radius/summary", async (req, res) => {
     const result = { affected: toRelativePaths(graph, affected), summary };
     setCached(cacheKey, result);
     res.json(result);
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
+    } catch (err) {
+    sendError(res, err);
   } finally {
     if (cleanup) await cleanup();
   }
@@ -102,10 +105,8 @@ analyzeRouter.post("/cycles", async (req, res) => {
     const graph = buildDependencyGraph(resolvedPath);
     const sccs = findStronglyConnectedComponents(graph);
     res.json({ cycles: sccs.map((scc) => toRelativePaths(graph, scc)) });
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
+    } catch (err) {
+    sendError(res, err);
   } finally {
     if (cleanup) await cleanup();
   }
@@ -132,11 +133,9 @@ analyzeRouter.post("/cycles/fix-suggestion", async (req, res) => {
     const result = { suggestion };
     setCached(cacheKey, result);
     res.json(result);
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
-  }finally {
+    } catch (err) {
+    sendError(res, err);
+  } finally {
     if (cleanup) await cleanup();
   }
 });
@@ -152,11 +151,9 @@ analyzeRouter.post("/dead-code", async (req, res) => {
     const graph = buildDependencyGraph(resolvedPath);
     const deadCode = findDeadCode(graph);
     res.json({ deadCode: toRelativePaths(graph, deadCode) });
-    } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
-  }finally {
+      } catch (err) {
+    sendError(res, err);
+  } finally {
     if (cleanup) await cleanup();
   }
 });
@@ -172,11 +169,9 @@ analyzeRouter.post("/topological-sort", async (req, res) => {
     const graph = buildDependencyGraph(resolvedPath);
     const order = topologicalSort(graph);
     res.json({ order: order.map((wave) => toRelativePaths(graph, wave)) });
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
-  }finally {
+    } catch (err) {
+    sendError(res, err);
+  } finally {
     if (cleanup) await cleanup();
   }
 });
@@ -203,11 +198,9 @@ analyzeRouter.post("/pr-risk-score", async (req, res) => {
     const result = { riskAssessment };
     setCached(cacheKey, result);
     res.json(result);
-  } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to analyze repository";
-    res.status(500).json({ error: message });
-  }finally {
+    } catch (err) {
+    sendError(res, err);
+  } finally {
     if (cleanup) await cleanup();
   }
 });
