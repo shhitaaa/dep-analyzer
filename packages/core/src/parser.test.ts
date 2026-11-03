@@ -60,4 +60,14 @@ describe("resolveSpecifier", () => {
 
     expect(actual).toEqual([".hidden/lib.ts", "main.ts"]);
   });
+
+  it("reports unresolved relative imports instead of silently dropping them", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-unresolved");
+    const graph = buildDependencyGraph(rootDir);
+    const unresolved = (graph.unresolved ?? []).map((u) => u.specifier).sort();
+
+    // "lodash" is an external package, not an unresolved import
+    expect(unresolved).toEqual(["./missing", "./styles.css"]);
+    expect(graph.edges).toEqual([]);
+  });
 });

@@ -10,9 +10,15 @@ export interface GraphEdge {
     specifier: string;
 }
 
+export interface UnresolvedImport {
+    from: string;
+    specifier: string;
+}
+
 export interface DependencyGraph {
     nodes: Map<string, GraphNode>;
     edges: GraphEdge[];
     outgoing: Map<string, Set<string>>;
     incoming: Map<string, Set<string>>;
+    unresolved?: UnresolvedImport[];
 }

@@ -1,6 +1,6 @@
 import { Node, Project, SourceFile, SyntaxKind } from "ts-morph";
 import * as path from "path";
-import { DependencyGraph, GraphNode, GraphEdge } from "./types";
+import { DependencyGraph, GraphNode, GraphEdge, UnresolvedImport } from "./types";
 
 // Folders that hold dependencies or generated output, not your own source.
 const IGNORED_DIRS = [
@@ -28,6 +28,7 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
 
   const nodes = new Map<string, GraphNode>();
   const edges: GraphEdge[] = [];
+  const unresolved: UnresolvedImport[] = [];
   const outgoing = new Map<string, Set<string>>();
   const incoming = new Map<string, Set<string>>();
 
@@ -46,7 +47,13 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
     for (const specifier of collectSpecifiers(sf)) {
       const toId = resolveSpecifier(sf, specifier);
 
-      if (!toId) continue;
+      if (!toId) {
+        // Bare specifiers ("lodash") are external packages; only relative ones can be "unresolved".
+        if (specifier.startsWith(".") || specifier.startsWith("/")) {
+          unresolved.push({ from: fromId, specifier });
+        }
+        continue;
+      }
 
       edges.push({ from: fromId, to: toId, specifier });
       outgoing.get(fromId)!.add(toId);
@@ -59,7 +66,7 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
     node.isEntry = (incoming.get(id)?.size ?? 0) === 0;
   }
 
-  return { nodes, edges, outgoing, incoming };
+  return { nodes, edges, outgoing, incoming, unresolved };
 }
 
 function collectSpecifiers(sf: SourceFile): string[] {
