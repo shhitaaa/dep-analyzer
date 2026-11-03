@@ -25,6 +25,10 @@ export function blastRadius(graph: DependencyGraph, startId: string): string[] {
 }
 
 export function findStronglyConnectedComponents(graph: DependencyGraph): string[][] {
+  // Cycles are about runtime imports: edges that exist only through "import type"
+  // can't make a runtime cycle, so we skip them here.
+  const adjacency = graph.runtimeOutgoing ?? graph.outgoing;
+
   let indexCounter = 0;
   const index = new Map<string, number>();
   const lowlink = new Map<string, number>();
@@ -45,7 +49,7 @@ export function findStronglyConnectedComponents(graph: DependencyGraph): string[
     stack.push(v);
     onStack.add(v);
 
-    const neighbors = graph.outgoing.get(v) ?? new Set<string>();
+    const neighbors = adjacency.get(v) ?? new Set<string>();
 
     for (const w of neighbors) {
         if (!index.has(w)) {
@@ -90,6 +94,7 @@ function buildCondensationGraph(graph: DependencyGraph, sccs: string[][]) {
   });
 
   for (const edge of graph.edges) {
+    if (edge.typeOnly) continue; // build order follows runtime imports, same as the SCCs
     const fromScc = sccIndex.get(edge.from)!;
     const toScc = sccIndex.get(edge.to)!;
     if (fromScc === toScc) continue; // edge is inside one cycle/group, ignore for build order

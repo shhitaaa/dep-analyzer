@@ -8,6 +8,7 @@ export interface GraphEdge {
     from: string;
     to:string;
     specifier: string;
+    typeOnly?: boolean;
 }
 
 export interface UnresolvedImport {
@@ -20,5 +21,6 @@ export interface DependencyGraph {
     edges: GraphEdge[];
     outgoing: Map<string, Set<string>>;
     incoming: Map<string, Set<string>>;
+    runtimeOutgoing?: Map<string, Set<string>>;
     unresolved?: UnresolvedImport[];
 }
