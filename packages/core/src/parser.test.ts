@@ -32,4 +32,14 @@ describe("resolveSpecifier", () => {
 
     expect(edges).toEqual(["index.ts->a.ts", "index.ts->b.ts"]);
   });
+
+  it("follows dynamic import() calls", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-dynamic");
+    const graph = buildDependencyGraph(rootDir);
+    const edges = graph.edges
+      .map((e) => `${path.basename(e.from)}->${path.basename(e.to)}`)
+      .sort();
+
+    expect(edges).toEqual(["main.ts->lazy.ts"]);
+  });
 });

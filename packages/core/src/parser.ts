@@ -1,4 +1,4 @@
-import { Project, SourceFile } from "ts-morph";
+import { Node, Project, SourceFile, SyntaxKind } from "ts-morph";
 import * as path from "path";
 import { DependencyGraph, GraphNode, GraphEdge } from "./types";
 
@@ -64,6 +64,15 @@ function collectSpecifiers(sf: SourceFile): string[] {
   for (const exp of sf.getExportDeclarations()) {
     const specifier = exp.getModuleSpecifierValue();
     if (specifier) specifiers.push(specifier);
+  }
+
+  // Dynamic imports: import("./lazy")
+  for (const call of sf.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    if (call.getExpression().getKind() !== SyntaxKind.ImportKeyword) continue;
+    const [arg] = call.getArguments();
+    if (arg && Node.isStringLiteral(arg)) {
+      specifiers.push(arg.getLiteralValue());
+    }
   }
 
   return specifiers;
