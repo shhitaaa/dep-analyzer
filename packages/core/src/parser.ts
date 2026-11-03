@@ -64,6 +64,14 @@ function resolveSpecifier(sf: SourceFile, specifier: string): string | null {
 
   const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.jsx`];
 
+  // TypeScript ESM style: source says "./foo.js" but the file on disk is foo.ts
+  if (base.endsWith(".js")) {
+    const stem = base.slice(0, -3);
+    candidates.push(`${stem}.ts`, `${stem}.tsx`);
+  } else if (base.endsWith(".jsx")) {
+    candidates.push(`${base.slice(0, -4)}.tsx`);
+  }
+
   const project = sf.getProject();
   for (const candidate of candidates) {
     const match = project.getSourceFile(candidate);
