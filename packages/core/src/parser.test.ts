@@ -52,4 +52,12 @@ describe("resolveSpecifier", () => {
 
     expect(edges).toEqual(["index.js->util.js"]);
   });
+
+  it("includes files in dot-directories but skips build-artifact ones like .next", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-dot");
+    const graph = buildDependencyGraph(rootDir);
+    const actual = [...graph.nodes.values()].map((n) => n.relativePath).sort();
+
+    expect(actual).toEqual([".hidden/lib.ts", "main.ts"]);
+  });
 });

@@ -2,6 +2,13 @@ import { Node, Project, SourceFile, SyntaxKind } from "ts-morph";
 import * as path from "path";
 import { DependencyGraph, GraphNode, GraphEdge } from "./types";
 
+// Folders that hold dependencies or generated output, not your own source.
+const IGNORED_DIRS = [
+  "node_modules", "dist", "build",
+  ".git", ".next", ".nuxt", ".svelte-kit", ".output", ".cache", ".turbo",
+  ".yarn", ".pnpm-store", ".parcel-cache", ".vercel", ".idea", ".vscode",
+];
+
 export function buildDependencyGraph(rootDir: string): DependencyGraph {
   const project = new Project({
     compilerOptions: {
@@ -11,9 +18,11 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
 
   project.addSourceFilesAtPaths([
     path.join(rootDir, "**/*.{js,jsx,ts,tsx}"),
-    `!${path.join(rootDir, "**/node_modules/**")}`,
-    `!${path.join(rootDir, "**/dist/**")}`,
-    `!${path.join(rootDir, "**/build/**")}`,
+    // The glob above skips dot-directories (e.g. .vitepress), so add them explicitly:
+    // nested ones, and ones directly under the root.
+    path.join(rootDir, "**/.*/**/*.{js,jsx,ts,tsx}"),
+    path.join(rootDir, ".*/**/*.{js,jsx,ts,tsx}"),
+    ...IGNORED_DIRS.map((dir) => `!${path.join(rootDir, `**/${dir}/**`)}`),
   ]);
   const sourceFiles = project.getSourceFiles();
 
