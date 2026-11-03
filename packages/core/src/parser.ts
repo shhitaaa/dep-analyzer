@@ -64,6 +64,11 @@ function resolveSpecifier(sf: SourceFile, specifier: string): string | null {
 
   const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.jsx`];
 
+  // Directory imports: "./lib" or ".." resolve to <dir>/index.*
+  for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+    candidates.push(path.join(base, `index${ext}`));
+  }
+
   // TypeScript ESM style: source says "./foo.js" but the file on disk is foo.ts
   if (base.endsWith(".js")) {
     const stem = base.slice(0, -3);

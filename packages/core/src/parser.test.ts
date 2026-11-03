@@ -12,4 +12,14 @@ describe("resolveSpecifier", () => {
 
     expect(edges).toEqual(["a.ts->b.ts"]);
   });
+
+  it("resolves directory imports (./lib and ..) to index files", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-index");
+    const graph = buildDependencyGraph(rootDir);
+    const edges = graph.edges
+      .map((e) => `${path.basename(e.from)}->${path.basename(e.to)}`)
+      .sort();
+
+    expect(edges).toEqual(["deep.ts->index.ts", "main.ts->index.ts"]);
+  });
 });
