@@ -66,9 +66,13 @@ function collectSpecifiers(sf: SourceFile): string[] {
     if (specifier) specifiers.push(specifier);
   }
 
-  // Dynamic imports: import("./lazy")
+  // Dynamic imports: import("./lazy") and CommonJS: require("./util")
   for (const call of sf.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-    if (call.getExpression().getKind() !== SyntaxKind.ImportKeyword) continue;
+    const callee = call.getExpression();
+    const isDynamicImport = callee.getKind() === SyntaxKind.ImportKeyword;
+    const isRequire = Node.isIdentifier(callee) && callee.getText() === "require";
+    if (!isDynamicImport && !isRequire) continue;
+
     const [arg] = call.getArguments();
     if (arg && Node.isStringLiteral(arg)) {
       specifiers.push(arg.getLiteralValue());

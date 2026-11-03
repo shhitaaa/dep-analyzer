@@ -42,4 +42,14 @@ describe("resolveSpecifier", () => {
 
     expect(edges).toEqual(["main.ts->lazy.ts"]);
   });
+
+  it("follows CommonJS require() calls", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-require");
+    const graph = buildDependencyGraph(rootDir);
+    const edges = graph.edges
+      .map((e) => `${path.basename(e.from)}->${path.basename(e.to)}`)
+      .sort();
+
+    expect(edges).toEqual(["index.js->util.js"]);
+  });
 });
