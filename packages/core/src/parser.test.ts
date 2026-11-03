@@ -22,4 +22,14 @@ describe("resolveSpecifier", () => {
 
     expect(edges).toEqual(["deep.ts->index.ts", "main.ts->index.ts"]);
   });
+
+  it("follows export ... from re-exports (barrel files)", () => {
+    const rootDir = path.join(__dirname, "..", "test-fixture-exports");
+    const graph = buildDependencyGraph(rootDir);
+    const edges = graph.edges
+      .map((e) => `${path.basename(e.from)}->${path.basename(e.to)}`)
+      .sort();
+
+    expect(edges).toEqual(["index.ts->a.ts", "index.ts->b.ts"]);
+  });
 });

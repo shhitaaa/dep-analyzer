@@ -34,8 +34,7 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
   for (const sf of sourceFiles) {
     const fromId = sf.getFilePath();
 
-    for (const imp of sf.getImportDeclarations()) {
-      const specifier = imp.getModuleSpecifierValue();
+    for (const specifier of collectSpecifiers(sf)) {
       const toId = resolveSpecifier(sf, specifier);
 
       if (!toId) continue;
@@ -52,6 +51,22 @@ export function buildDependencyGraph(rootDir: string): DependencyGraph {
   }
 
   return { nodes, edges, outgoing, incoming };
+}
+
+function collectSpecifiers(sf: SourceFile): string[] {
+  const specifiers: string[] = [];
+
+  for (const imp of sf.getImportDeclarations()) {
+    specifiers.push(imp.getModuleSpecifierValue());
+  }
+
+  // Re-exports: export { x } from "./a" and export * from "./b"
+  for (const exp of sf.getExportDeclarations()) {
+    const specifier = exp.getModuleSpecifierValue();
+    if (specifier) specifiers.push(specifier);
+  }
+
+  return specifiers;
 }
 
 function resolveSpecifier(sf: SourceFile, specifier: string): string | null {
